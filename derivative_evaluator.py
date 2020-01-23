@@ -48,6 +48,8 @@ def derive(expression):
                                 
                                 )
 def simplify(expression):
+    if expression == None:
+        return None
     if is_num(expression):
         return expression
     if expression == "x":
@@ -58,17 +60,37 @@ def simplify(expression):
             if is_num(expression.p1) and is_num(expression.p2):
                 return expression.p1 + expression.p2
             if expression.p1 == 0:
-                return copy(expression.p2)
+                return simplify(expression.p2)
             if expression.p2 == 0:
-                return copy(expression.p1)
-            return copy(expression)
+                return simplify(expression.p1)
+            
+            return Expression(simplify(expression.p1), operation, simplify(expression.p2))
+        if operation == "-":
+            if is_num(expression.p1) and is_num(expression.p2):
+                return expression.p1 - expression.p2
+            if expression.p2 == 0:
+                return simplify(expression.p1)
+            return Expression(simplify(expression.p1), operation, simplify(expression.p2))
+        if operation == "*":
+            if is_num(expression.p1) and is_num(expression.p2):
+                return expression.p1 * expression.p2
+            if expression.p1 == 0:
+                return 0
+            if expression.p2 == 0:
+                return 0
+            if expression.p1 == 1:
+                return simplify(expression.p2)
+            if expression.p2 == 1:
+                return simplify(expression.p1)
+            return Expression(simplify(expression.p1), operation, simplify(expression.p2))
              
     return copy(expression)
         
 def main():
-    e = Expression(Expression(3, "*", "x"), "+", 1)
+    e = Expression(Expression(Expression(3, "*", "x"), "+", 1), "+", Expression("x", "*", "x"))
     d = derive(e)
-    d = simplify(d)
+    for i in range(100):
+        d = simplify(d)
     print(d)
         
         
