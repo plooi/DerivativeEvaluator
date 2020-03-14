@@ -1,4 +1,5 @@
 from random import random
+
 def main():
     while 1:
         e = input("Enter an expression involving x (you must put * between all multiplications):")
@@ -24,6 +25,16 @@ class Expression:
         self.p1 = p1
         self.p2 = p2
     def __str__(self):
+    
+        if is_num(self.p1) or self.p1 == "x" or (isinstance(self.p1, Expression) and self.p1.operation in ["sin","cos","tan"]):
+            p1 = str(self.p1)
+        else:
+            p1 = "(" + str(self.p1) + ")"
+        if is_num(self.p2) or self.p2 == "x" or (isinstance(self.p2, Expression) and self.p2.operation in ["sin","cos","tan"]):
+            p2 = str(self.p2)
+        else:
+            p2 = "(" + str(self.p2) + ")"
+    
         if self.operation == "+":
             if self.p1 == 0:
                 return str(self.p2)
@@ -31,7 +42,7 @@ class Expression:
                 return str(self.p1)
         if self.operation == "-":
             if self.p1 == 0:
-                return "-("+str(self.p2) +")"
+                return "-" + p2#"-("+str(self.p2) +")"
             if self.p2 == 0:
                 return str(self.p1)
         if self.operation == "*":
@@ -42,9 +53,18 @@ class Expression:
         if self.operation == "/":
             if self.p2 == 1:
                 return str(self.p1)
+        if self.operation in ["sin","cos","tan"]:
+            return self.operation + "(" + str(self.p2) + ")"
         if self.operation == "+":
             return str(self.p1) + " " + self.operation + " " + str(self.p2)
-        return "(" + str(self.p1) + ") " + self.operation + " (" + str(self.p2) + ") "
+        if self.operation == "-":
+            return str(self.p1) + " " + self.operation + " "+  p2
+        
+        
+        
+        
+        
+        return p1 + self.operation + p2
     def copy(self):
         p1 = self.p1.copy() if is_exp(self.p1) else self.p1
         p2 = self.p2.copy() if is_exp(self.p2) else self.p2
@@ -66,6 +86,13 @@ def derive(expression):
         fail("invalid variable name " + str(expression) + ". Can only be 'x'")
     elif type(expression) == type(Expression(None,None,None)):
         operation = expression.operation
+        if operation == "sin":
+            return Expression(Expression(0, "cos", expression.p2), "*", derive(expression.p2))
+        if operation == "cos":
+            return Expression(Expression(0,"-",Expression(0, "sin", expression.p2)), "*", derive(expression.p2))
+        if operation == "tan":
+            cosSQx = Expression(Expression(0, "cos", expression.p2), "*", Expression(0, "cos", expression.p2))
+            return Expression(Expression(1,"/",cosSQx), "*", derive(expression.p2))
         if operation in ["+", "-"]:
             return Expression(derive(expression.p1), operation, derive(expression.p2))
         if operation == "*":
@@ -327,15 +354,18 @@ def find_mult_term_end(string, start):
         i += 1
     return i
 
-def parse(string):
-    
+def parse(string, default = 0):
+    string = string.replace("sin", "s")
+    string = string.replace("cos", "c")
+    string = string.replace("tan", "t")
+    string = string.replace("X", "x")
     #checks for corner cases:
     
     while 1:
         orig_string = string
         string = string.strip().replace(" ", "")
         if string == "":
-            return 0
+            return default
         if string.startswith("-(") and string.endswith(")") and find_close(1, string) == len(string)-1:
             return Expression(0,"-",parse(string[2:-1]))
         if string.startswith("(") and string.endswith(")")  and find_close(0, string) == len(string)-1:
@@ -372,6 +402,8 @@ def parse(string):
             i = find_close(i, string)+1
             continue
         
+        
+        
         if string[i] == "+": 
             return Expression(parse(string[0:i]), "+", parse(string[i+1:]))
         if string[i] == "-": 
@@ -399,14 +431,29 @@ def parse(string):
         if string[i] == "/": 
             j = find_mult_term_end(string, i+1)
             if j == len(string):
-                return Expression(parse(string[0:i]), "/", parse(string[i+1:j])) 
+                return Expression(parse(string[0:i],default=1), "/", parse(string[i+1:j])) 
             else:
                 return Expression(Expression(parse(string[0:i]), "/", parse(string[i+1:j])) , "*", parse(string [j:]))
         i += 1
     
+    i = 0
+    while i < len(string):
+        if string[i] == "(": 
+            i = find_close(i, string)+1
+            continue
+        
+        if string[i] == "s": 
+            j = find_close(i+1, string)
+            return Expression(0, "sin", parse(string[i+2:j])) 
+        if string[i] == "c": 
+            j = find_close(i+1, string)
+            return Expression(0, "cos", parse(string[i+2:j])) 
+        if string[i] == "t": 
+            j = find_close(i+1, string)
+            return Expression(0, "tan", parse(string[i+2:j])) 
+        i += 1
     
     
-    print("huh?")
     if string == "x":
         return "x"
     try:
@@ -415,7 +462,8 @@ def parse(string):
         except:
             return float(string)
     except:
-        print("Failed on parsing '%s'" %(string))
+        pass
+        #print("Failed on parsing '%s'" %(string))
                 
     
         
